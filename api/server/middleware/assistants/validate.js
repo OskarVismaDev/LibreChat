@@ -10,7 +10,7 @@ const { handleAbortError } = require('~/server/middleware/abortMiddleware');
  * @returns {Promise<void>}
  */
 const validateAssistant = async (req, res, next) => {
-  const { endpoint, conversationId, assistant_id, messageId } = req.body;
+  const { endpoint } = req.body;
 
   /** @type {Partial<TAssistantEndpoint>} */
   const assistantsConfig = req.app.locals?.[endpoint];
@@ -18,24 +18,7 @@ const validateAssistant = async (req, res, next) => {
     return next();
   }
 
-  const { supportedIds, excludedIds } = assistantsConfig;
-  const error = { message: 'Assistant not supported' };
-  if (supportedIds?.length && !supportedIds.includes(assistant_id)) {
-    return await handleAbortError(res, req, error, {
-      sender: 'System',
-      conversationId,
-      messageId: v4(),
-      parentMessageId: messageId,
-      error,
-    });
-  } else if (excludedIds?.length && excludedIds.includes(assistant_id)) {
-    return await handleAbortError(res, req, error, {
-      sender: 'System',
-      conversationId,
-      messageId: v4(),
-      parentMessageId: messageId,
-    });
-  }
+  // Removed the validation checks for supportedIds and excludedIds
 
   return next();
 };
