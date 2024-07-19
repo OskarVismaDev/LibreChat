@@ -236,6 +236,7 @@ const fetchAssistants = async ({ req, res, overrideEndpoint }) => {
 
   body.data = filterAssistants({
     userId: req.user.id,
+    userEmail: req.user.email,
     assistants: body.data,
     assistantsConfig: req.app.locals[endpoint],
   });
@@ -246,25 +247,39 @@ const fetchAssistants = async ({ req, res, overrideEndpoint }) => {
  * Filter assistants based on configuration.
  *
  * @param {object} params - The parameters object.
- * @param {string} params.userId -  The user ID to filter private assistants.
+ * @param {string} params.userId - The user ID to filter private assistants.
+ * @param {string} params.userEmail - The user email to filter assistants with email in description.
  * @param {Assistant[]} params.assistants - The list of assistants to filter.
- * @param {Partial<TAssistantEndpoint>} params.assistantsConfig -  The assistant configuration.
+ * @param {Partial<TAssistantEndpoint>} params.assistantsConfig - The assistant configuration.
  * @returns {Assistant[]} - The filtered list of assistants.
  */
-function filterAssistants({ assistants, userId, assistantsConfig }) {
+function filterAssistants({ assistants, userId, userEmail, assistantsConfig }) {
   const { supportedIds, excludedIds, privateAssistants } = assistantsConfig;
+  let filteredAssistants = [];
+
   if (privateAssistants) {
-    let filteredAssistants = assistants.filter((assistant) => userId === assistant.metadata?.author);
-    if (supportedIds?.length) {
-      filteredAssistants = filteredAssistants.concat(assistants.filter((assistant) => supportedIds.includes(assistant.id)))
-    }
-    return filteredAssistants;
+    filteredAssistants = assistants.filter((assistant) => 
+      userId === assistant.metadata?.author ||
+      supportedIds?.includes(assistant.id) ||
+      assistant.description?.includes(userEmail)
+    );
   } else if (supportedIds?.length) {
-    return assistants.filter((assistant) => supportedIds.includes(assistant.id));
+    filteredAssistants = assistants.filter((assistant) => 
+      supportedIds.includes(assistant.id) ||
+      assistant.description?.includes(userEmail)
+    );
   } else if (excludedIds?.length) {
-    return assistants.filter((assistant) => !excludedIds.includes(assistant.id));
+    filteredAssistants = assistants.filter((assistant) => 
+      !excludedIds.includes(assistant.id) &&
+      assistant.description?.includes(userEmail)
+    );
+  } else {
+    filteredAssistants = assistants.filter((assistant) => 
+      assistant.description?.includes(userEmail)
+    );
   }
-  return assistants;
+
+  return filteredAssistants;
 }
 
 module.exports = {
